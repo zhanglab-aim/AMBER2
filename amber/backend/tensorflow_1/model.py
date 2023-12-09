@@ -233,6 +233,20 @@ def get_train_op(loss, variables, optimizer, **kwargs):
 def plot_model(model, to_file):
     tf.keras.utils.plot_model(model, to_file=to_file, show_shapes=True, show_layer_names=True)
 
+def get_optimizer(opt, parameters, opt_config=None):
+    opt_config = opt_config or {'learning_rate':0.01}
+    if callable(opt):
+        opt_ = opt
+    elif type(opt) is str:
+        if opt.lower() == 'adam':
+            opt_ = tf.keras.optimizers.Adam
+        elif opt.lower() == 'sgd':
+            opt_ = tf.keras.optimizers.SGD
+        else:
+            raise Exception(f"unknown opt {opt}")
+    else:
+        raise Exception(f"unknown opt {opt}")
+    return opt_(**opt_config)
 
 # alias
 Model = tf.keras.models.Model

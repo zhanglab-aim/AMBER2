@@ -1,7 +1,7 @@
 # -*- coding: UTF-8 -*-
 
 """
-Implementations of NAS controller for searching architectures
+Implementations of Recurrent RL controller for searching architectures
 """
 
 # Changelog
@@ -18,15 +18,15 @@ from .base import BaseController
 from ...backend import mod_name, _gen_missing_api
 
 
-controller_cls = ['GeneralController', 'MultiInputController', 'MultiIOController', 'OperationController', 'ZeroShotController']
+controller_cls = ['RecurrentRLController',]
 
 
 if mod_name == 'tensorflow_1':
-    from . import tf1 as mod
+    from . import tf1_impl as mod
 elif mod_name == 'tensorflow_2':
-    from . import tf2 as mod
+    from . import tf2_impl as mod
 elif mod_name == 'pytorch':
-    from . import pytorch as mod
+    from . import torch_impl as mod
 else:
     raise Exception(f"Unsupported {mod_name} backend for controller")
 

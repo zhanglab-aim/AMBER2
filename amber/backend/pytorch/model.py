@@ -6,7 +6,6 @@ import numpy as np
 import warnings
 from . import cache
 from .layer import get_layer
-from .utils import InMemoryLogger
 from .tensor import TensorType
 
 # disable lightning logging
@@ -81,8 +80,6 @@ class Model(pl.LightningModule):
     
     def fit(self, x, y=None, validation_data=None, batch_size=32, epochs=1, nsteps=None, callbacks=None, logger=None, verbose=False):
         assert self.is_compiled, ValueError("this model instance has not been compiled yet")
-        if logger is None:
-            logger = InMemoryLogger()
         self.train()
         train_data = self._make_dataloader(x=x, y=y, batch_size=batch_size)
         if validation_data is not None:

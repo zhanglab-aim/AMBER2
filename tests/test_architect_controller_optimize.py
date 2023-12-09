@@ -52,10 +52,9 @@ class TestGeneralController(testing_utils.TestCase):
     def setUp(self):
         super(TestGeneralController, self).setUp()
         self.session = F.Session()
-        self.model_space, _ = testing_utils.get_example_conv1d_space(num_layers=3, num_pool=2)
-        self.controller = architect.controller.GeneralController(
+        self.model_space, _ = testing_utils.get_example_conv1d_space(num_layers=5, num_pool=2)
+        self.controller = architect.controller.RecurrentRLController(
             model_space=self.model_space,
-            buffer_type='ordinal',
             with_skip_connection=True,
             kl_threshold=0.05,
             buffer_size=15,
@@ -64,7 +63,6 @@ class TestGeneralController(testing_utils.TestCase):
             train_pi_iter=2,
             lstm_size=32,
             lstm_num_layers=1,
-            lstm_keep_prob=1.0,
             optim_algo="adam",
             skip_target=0.8,
             skip_weight=None,
@@ -75,8 +73,8 @@ class TestGeneralController(testing_utils.TestCase):
         super(TestGeneralController, self).tearDown()
         self.tempdir.cleanup()
 
-    def _test_get_architecture(self):
-        act, prob = self.controller.get_action()
+    def test_get_architecture(self):
+        act, prob = self.controller.sample()
         self.assertIsInstance(act, np.ndarray)
         self.assertIsInstance(prob, list)
         # initial probas should be close to uniform
@@ -94,23 +92,23 @@ class TestGeneralController(testing_utils.TestCase):
 
     @unittest.skipIf(F.mod_name=='tensorflow_1', "only implemented in dynamic backend")
     def test_optimizer_dynamic(self):
-        a1, p1 = self.controller.get_action()
-        a2, p2 = self.controller.get_action()
+        a1, p1 = self.controller.sample()
+        a2, p2 = self.controller.sample()
         a_batch = np.array([a1, a2]).T
         p_batch = [np.concatenate(x) for x in zip(*[p1, p2])]
-        self.controller._build_trainer(input_arc=a_batch)
-        old_log_probs, old_probs = F.to_numpy(self.controller._build_trainer(input_arc=a_batch))
+        self.controller.evaluate(input_arc=a_batch)
+        old_log_probs, old_probs, _, _ = F.to_numpy(self.controller.evaluate(input_arc=a_batch))
         losses = []
         max_iter = 100
         for i in range(max_iter):
-            loss, _, _ = self.controller._build_train_op(
+            loss, _, _ = self.controller.train_step(
                 input_arc=a_batch, 
                 advantage=F.Variable([1,-1], trainable=False),
                 old_probs=p_batch
             )
             if i % (max_iter//5) == 0:
                 losses.append(F.to_numpy(loss))
-        new_log_probs, new_probs = F.to_numpy(self.controller._build_trainer(input_arc=a_batch))
+        new_log_probs, new_probs, _, _ = F.to_numpy(self.controller.evaluate(input_arc=a_batch))
         # loss should decrease over time
         self.assertLess(losses[-1], losses[0])
         # 1st index positive reward should decrease/minimize its loss
@@ -120,8 +118,8 @@ class TestGeneralController(testing_utils.TestCase):
     
     @unittest.skipIf(F.mod_name!='tensorflow_1', "only implemented in static/TF1 backend")
     def test_optimize_static(self):
-        a1, p1 = self.controller.get_action()
-        a2, p2 = self.controller.get_action()
+        a1, p1 = self.controller.sample()
+        a2, p2 = self.controller.sample()
         a_batch = np.array([a1, a2])
         p_batch = [np.concatenate(x) for x in zip(*[p1, p2])]
         feed_dict = {self.controller.input_arc[i]: a_batch[:, [i]]
@@ -152,7 +150,7 @@ class TestGeneralController(testing_utils.TestCase):
         probs = []
         rewards = []
         for _ in range(10):
-            arc, prob = self.controller.get_action()
+            arc, prob = self.controller.sample()
             arcs.append(arc)
             probs.append(prob)
             rewards.append(np.random.random(1)[0])
@@ -160,12 +158,10 @@ class TestGeneralController(testing_utils.TestCase):
             self.controller.store(prob=prob, action=arc,
                                     reward=reward)
         # train
-        self.controller.buffer.finish_path(global_ep=0, state_space=self.controller.model_space, working_dir=self.tempdir.name)
         old_loss = self.controller.train()
         for arc, prob, reward in zip(*[arcs, probs, rewards]):
             self.controller.store(prob=prob, action=arc,
                                     reward=reward)
-        self.controller.buffer.finish_path(global_ep=1, state_space=self.controller.model_space, working_dir=self.tempdir.name)
         new_loss = self.controller.train()
         self.assertLess(new_loss, old_loss)
 
