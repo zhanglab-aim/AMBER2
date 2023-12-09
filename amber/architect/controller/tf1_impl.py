@@ -10,8 +10,8 @@ import sys
 import numpy as np
 import h5py
 from ... import backend as F
-from .base import BaseController, proximal_policy_optimization_loss
-from .base import get_kl_divergence_n_entropy, convert_arc_to_onehot
+from .base_controller import BaseController, proximal_policy_optimization_loss
+from .base_controller import get_kl_divergence_n_entropy, convert_arc_to_onehot
 
 
 

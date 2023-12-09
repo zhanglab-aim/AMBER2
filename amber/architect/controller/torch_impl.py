@@ -5,8 +5,8 @@ General controller for searching computational operation per layer, and residual
 import h5py
 import numpy as np
 import os
-from .base import BaseController, proximal_policy_optimization_loss
-from .base import get_kl_divergence_n_entropy
+from .base_controller import BaseController, proximal_policy_optimization_loss
+from .base_controller import get_kl_divergence_n_entropy
 
 
 # dynamic graphs

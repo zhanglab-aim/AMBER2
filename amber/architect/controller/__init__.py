@@ -14,7 +14,7 @@ Implementations of Recurrent RL controller for searching architectures
 #    - Dec. 8, 2023: move GeneralController to RecurrentRLController
 
 import sys
-from .base import BaseController
+from .base_controller import BaseController
 from ...backend import mod_name, _gen_missing_api
 
 

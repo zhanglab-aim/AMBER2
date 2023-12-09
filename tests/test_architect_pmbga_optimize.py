@@ -15,9 +15,8 @@ class TestPmbga(testing_utils.TestCase):
             [dict(Layer_type='conv1d', kernel_size=pmbga.bayes_prob.Poisson(8, 1), filters=4)],
             [dict(Layer_type='conv1d', kernel_size=pmbga.bayes_prob.Poisson(4, 1), filters=4)],
         ])
-        self.controller = pmbga.ProbaModelBuildGeneticAlgo(
+        self.searcher = pmbga.ProbaModelBuildGeneticAlgo(
             model_space=self.model_space,
-            buffer_type='population',
             buffer_size=1,
             batch_size=5,
         )
@@ -27,8 +26,8 @@ class TestPmbga(testing_utils.TestCase):
         super(TestPmbga, self).tearDown()
         self.tempdir.cleanup()
 
-    def test_get_action(self):
-        arc, _ = self.controller.get_action()
+    def test_sample(self):
+        arc, _ = self.searcher.sample()
         self.assertTrue(type(arc) is list)
         self.assertTrue(len(arc) == 2)
         for i in range(2):
@@ -39,12 +38,12 @@ class TestPmbga(testing_utils.TestCase):
     def test_store_and_fetch(self):
         arc_dict = {}
         for i in range(30):
-            arc = self.controller.get_action()
+            arc = self.searcher.sample()[0]
             arc_dict[i] = arc
-            self.controller.store(action=arc, reward=i)
+            self.searcher.store(action=arc, reward=i)
 
-        self.controller.buffer.finish_path(self.model_space, 0, self.tempdir.name)
-        gen = self.controller.buffer.get_data(5)
+        self.searcher.buffer.finish_path(self.model_space, 0, self.tempdir.name)
+        gen = self.searcher.buffer.get_data(5)
         cnt = 0
         for data in gen:
             cnt += 1
@@ -60,10 +59,10 @@ class TestPmbga(testing_utils.TestCase):
     def test_train(self):
         for i in range(30):
             arc = [Operation('conv1d', kernel_size=12, filters=4), Operation('conv1d', kernel_size=1, filters=4)]
-            self.controller.store(action=arc, reward=i)
-        self.controller.train(episode=0, working_dir=self.tempdir.name)
-        self.assertLess(8, self.controller.model_space_probs[(0, 'conv1d', 'kernel_size')].sample(size=100).mean())
-        self.assertGreater(4, self.controller.model_space_probs[(1, 'conv1d', 'kernel_size')].sample(size=100).mean())
+            self.searcher.store(action=arc, reward=i)
+        self.searcher.train(episode=0, working_dir=self.tempdir.name)
+        self.assertLess(8, self.searcher.model_space_probs[(0, 'conv1d', 'kernel_size')].sample(size=100).mean())
+        self.assertGreater(4, self.searcher.model_space_probs[(1, 'conv1d', 'kernel_size')].sample(size=100).mean())
 
 
 class TestBayesProbs(unittest.TestCase):

@@ -6,8 +6,14 @@ import numpy as np
 
 
 class BaseSearcher:
-    pass
+    def sample(self) -> Tuple[np.ndarray, list]:
+        pass
 
+    def evaluate(self, input_arc: Union[np.ndarray, list]) -> list:
+        pass
+
+    def train(self) -> float:
+        pass
 
 class BaseModelSpace:
     pass

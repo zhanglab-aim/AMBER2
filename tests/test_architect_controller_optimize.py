@@ -52,7 +52,7 @@ class TestGeneralController(testing_utils.TestCase):
     def setUp(self):
         super(TestGeneralController, self).setUp()
         self.session = F.Session()
-        self.model_space, _ = testing_utils.get_example_conv1d_space(num_layers=5, num_pool=2)
+        self.model_space, _ = testing_utils.get_example_conv1d_space(num_layers=12, num_pool=3)
         self.controller = architect.controller.RecurrentRLController(
             model_space=self.model_space,
             with_skip_connection=True,
@@ -61,7 +61,7 @@ class TestGeneralController(testing_utils.TestCase):
             batch_size=5,
             session=self.session,
             train_pi_iter=2,
-            lstm_size=32,
+            lstm_size=64,
             lstm_num_layers=1,
             optim_algo="adam",
             skip_target=0.8,
