@@ -90,6 +90,14 @@ def get_example_conv1d_space(out_filters=8, num_layers=4, num_pool=2):
     return model_space, layer_sharing
 
 
+def get_example_variable_space(num_layers=5, num_choices=7):
+    variable_space = architect.VariableSpace.from_list([
+        architect.IntegerModelVariable('layer%i'%i, min=1, max=num_choices)
+        for i in range(num_layers)
+    ])
+    return variable_space
+
+
 def get_example_sparse_model_space(num_layers=4):
     """Model space for multi-input/output sparse feed-forward nets"""
     state_space = architect.ModelSpace()

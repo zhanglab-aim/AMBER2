@@ -14,7 +14,7 @@ import os
 import numpy as np
 from collections import defaultdict
 from .bayes_prob import *
-from ..modelSpace import ModelSpace, Operation
+from ..model_space import ModelSpace, Operation
 
 
 class PopulationBuffer:

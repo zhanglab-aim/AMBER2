@@ -433,6 +433,63 @@ class Buffer:
             ], lt_nrbuffer[i:b, :]
 
 
+class ResNetArchTokenDecoder:
+    def __init__(self, model_space):
+        """ResNetArchTokenDecoder is for decoding and encoding neural architectures of neural
+        networks with residual connections
+
+        Parameters
+        ----------
+        model_space : amber.architect.BaseModelSpace
+            The model space which architectures are being sampled from
+        """
+        self.model_space = model_space
+        self._num_layers = len(self.model_space)
+
+    def decode(self, arc_seq):
+        """Decode a sequence of architecture tokens into operations and res-connections
+        """
+        start_idx = 0
+        operations = []
+        res_con = []
+        for layer_id in range(self._num_layers):
+            operations.append(arc_seq[start_idx])
+            if layer_id > 0:
+                res_con.append(arc_seq[(start_idx+1) : (start_idx + layer_id + 1)])
+            start_idx += layer_id + 1
+        return operations, res_con
+
+    def encode(self, operations, res_con):
+        """Encode operations and residual connections to a sequence of architecture tokens
+
+        This is the inverse function for `decode`
+
+        Parameters
+        ----------
+        operations : list
+            A list of integers for categorically-encoded operations
+        res_con : list
+            A list of list where each entry is a binary-encoded residual connections
+        """
+        operations_ = list(operations)
+        arc_seq = [operations_.pop(0)]
+        for op, res in zip(operations_, res_con):
+            arc_seq.append(op)
+            arc_seq.extend(res)
+        return arc_seq
+
+    def sample(self, seed=None):
+        np.random.seed(seed)
+        ops = []
+        for _ in range(self._num_layers):
+            ops.append(np.random.randint(len(self.model_space[_])))
+        res_con = []
+        for _ in range(1, self._num_layers):
+            res_con.append( np.random.binomial(n=1, p=0.5, size=_).tolist())
+        np.random.seed(None)
+        return self.encode(operations=ops, res_con=res_con)
+
+
 class BaseController(BaseSearcher):
     """
     GeneralController for neural architecture search
@@ -531,6 +588,7 @@ class BaseController(BaseSearcher):
 
     def __init__(
         self,
+        variable_space=None,
         model_space=None,
         with_skip_connection=False,
         share_embedding=None,
@@ -552,13 +610,25 @@ class BaseController(BaseSearcher):
         verbose=0,
     ):
         super().__init__()
-        self.model_space = model_space
+        if variable_space is not None:
+            assert model_space is None, ValueError('cannot provide both variable_space and model_space')
+            for i in range(len(variable_space)):
+                assert variable_space[i].num_choices < np.inf, ValueError(f'invalid variable num_choice at index {i}; please use IntegerModelVariable for controller')
+            self.model_space = variable_space
+            self.num_layers = len(self.model_space)
+            self.num_choices_per_layer = [
+                self.model_space[i].num_choices for i in range(self.num_layers)
+            ]
+        elif model_space is not None:
+            self.model_space = model_space
+            self.num_layers = len(self.model_space)
+            self.num_choices_per_layer = [
+                len(self.model_space[i]) for i in range(self.num_layers)
+            ]
+        else: 
+            raise ValueError('must provide at least one of variable space or model space')
         self.share_embedding = share_embedding
         self.with_skip_connection = with_skip_connection
-        self.num_layers = len(model_space)
-        self.num_choices_per_layer = [
-            len(model_space[i]) for i in range(self.num_layers)
-        ]
 
         self.buffer = Buffer(
             max_size=buffer_size,
@@ -741,6 +811,8 @@ class BaseController(BaseSearcher):
                     )  # batch_size, layer_id, lstm_size
                     inputs = F.matmul(skip, anchors_)  # batch_size, 1, lstm_size
                     inputs = F.squeeze(inputs, axis=1)
+                    # XXX: should add this or not?? what happens for zero skip-connection, inputs is zero?
+                    inputs += F.embedding_lookup(self.w_emb["start"][layer_id], token) 
                     inputs /= 1.0 + F.reduce_sum(skip, axis=2)  # batch_size, lstm_size
 
 
