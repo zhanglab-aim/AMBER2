@@ -16,7 +16,7 @@ logging.disable(sys.maxsize)
 
 class TestModelSpace(testing_utils.TestCase):
     def test_conv1d_model_space(self):
-        model_space = architect.ModelSpace()
+        model_space = architect.OperationSpace()
         num_layers = 2
         out_filters = 8
         layer_ops = [

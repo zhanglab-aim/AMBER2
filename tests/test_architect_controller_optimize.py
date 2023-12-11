@@ -18,15 +18,13 @@ from amber.utils import testing_utils
 logging.disable(sys.maxsize)
 
 
-class TestGeneralController(testing_utils.TestCase):
+class TestControllerModelSpace(testing_utils.TestCase):
     def setUp(self):
-        super(TestGeneralController, self).setUp()
+        super(TestControllerModelSpace, self).setUp()
         self.session = F.Session()
-        #self.model_space, _ = testing_utils.get_example_conv1d_space(num_layers=5, num_pool=3)
         self.model_space = testing_utils.get_example_variable_space(num_layers=5, num_choices=7)
         self.controller = architect.controller.RecurrentRLController(
-            #model_space=self.model_space,
-            variable_space=self.model_space,
+            model_space=self.model_space,
             with_skip_connection=True,
             kl_threshold=0.05,
             buffer_size=15,
@@ -42,7 +40,7 @@ class TestGeneralController(testing_utils.TestCase):
         self.tempdir = tempfile.TemporaryDirectory()
     
     def tearDown(self):
-        super(TestGeneralController, self).tearDown()
+        super(TestControllerModelSpace, self).tearDown()
         self.tempdir.cleanup()
 
     def test_get_architecture(self):
@@ -138,6 +136,27 @@ class TestGeneralController(testing_utils.TestCase):
         self.assertLess(new_loss, old_loss)
 
 
+class TestControllerOperationSpace(TestControllerModelSpace):
+    def setUp(self):
+        super(TestControllerOperationSpace, self).setUp()
+        self.session = F.Session()
+        self.model_space, _ = testing_utils.get_example_conv1d_space(num_layers=5, num_pool=3)
+        self.controller = architect.controller.RecurrentRLController(
+            model_space=self.model_space,
+            with_skip_connection=True,
+            kl_threshold=0.05,
+            buffer_size=15,
+            batch_size=5,
+            session=self.session,
+            train_pi_iter=2,
+            lstm_size=64,
+            lstm_num_layers=1,
+            optim_algo="adam",
+            skip_target=0.8,
+            skip_weight=0.1,
+            name='controller_2'
+        )
+        self.tempdir = tempfile.TemporaryDirectory()
 
 if __name__ == '__main__':
     unittest.main()

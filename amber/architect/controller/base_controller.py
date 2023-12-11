@@ -2,6 +2,7 @@ from ... import backend as F
 import os
 import numpy as np
 from ..base import BaseSearcher
+from ..model_space import OperationSpace, ModelSpace
 
 
 def lstm(x, prev_c, prev_h, w):
@@ -476,7 +477,7 @@ class ResNetArchTokenDecoder:
         for op, res in zip(operations_, res_con):
             arc_seq.append(op)
             arc_seq.extend(res)
-        return arc_seq
+        return np.array(arc_seq)
 
     def sample(self, seed=None):
         np.random.seed(seed)
@@ -588,7 +589,6 @@ class BaseController(BaseSearcher):
 
     def __init__(
         self,
-        variable_space=None,
         model_space=None,
         with_skip_connection=False,
         share_embedding=None,
@@ -610,16 +610,15 @@ class BaseController(BaseSearcher):
         verbose=0,
     ):
         super().__init__()
-        if variable_space is not None:
-            assert model_space is None, ValueError('cannot provide both variable_space and model_space')
-            for i in range(len(variable_space)):
-                assert variable_space[i].num_choices < np.inf, ValueError(f'invalid variable num_choice at index {i}; please use IntegerModelVariable for controller')
-            self.model_space = variable_space
+        if isinstance(model_space, ModelSpace):
+            for i in range(len(model_space)):
+                assert model_space[i].num_choices < np.inf, ValueError(f'invalid variable num_choice at index {i}; please use IntegerModelVariable for controller')
+            self.model_space = model_space
             self.num_layers = len(self.model_space)
             self.num_choices_per_layer = [
                 self.model_space[i].num_choices for i in range(self.num_layers)
             ]
-        elif model_space is not None:
+        elif isinstance(model_space, OperationSpace):
             self.model_space = model_space
             self.num_layers = len(self.model_space)
             self.num_choices_per_layer = [
@@ -659,6 +658,7 @@ class BaseController(BaseSearcher):
 
         self.optim_algo = optim_algo
         self.name = name
+        self.decoder = ResNetArchTokenDecoder(model_space=self.model_space)
 
         self.create_learner()
 
@@ -834,7 +834,7 @@ class BaseController(BaseSearcher):
             skip_penaltys,
         )
 
-    def sample(self):
+    def sample(self, decode=False):
         """Get a sampled architecture/action and its corresponding probabilities give current controller policy parameters.
 
         The generated architecture is the out-going information from controller to manager. which in turn will feedback
@@ -858,11 +858,17 @@ class BaseController(BaseSearcher):
         ret = self.forward(input_arc=None)
         onehots = F.to_numpy(F.reshape(F.concat(ret[0], axis=0), [-1]))
         probs = [F.to_numpy(x) for x in ret[1]]
+        if decode is True:
+            onehots = self.decoder.decode(onehots)
         return onehots, probs
 
-    def evaluate(self, input_arc):
+    def evaluate(self, input_arc, encode=False):
+        if encode is True:
+            input_arc = self.decoder.encode(operations=input_arc[0], res_con=input_arc[1])
         if type(input_arc) is not F.TensorType:
             input_arc = F.Variable(input_arc, trainable=False)
+            if len(F.shape(input_arc)) == 1:
+                input_arc = F.reshape(input_arc, [-1,1])
         (
             arc_seq,
             probs,

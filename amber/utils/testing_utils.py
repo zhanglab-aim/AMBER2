@@ -73,7 +73,7 @@ class PseudoReward(PseudoCaller):
 
 def get_example_conv1d_space(out_filters=8, num_layers=4, num_pool=2):
     """Model space for stacking the same conv-pool-id layers"""
-    model_space = architect.ModelSpace()
+    model_space = architect.OperationSpace()
     expand_layers = [num_layers//num_pool-1 + i*(num_layers//num_pool) for i in range(num_pool-1)]
     layer_sharing = {}
     for i in range(num_layers):
@@ -91,7 +91,7 @@ def get_example_conv1d_space(out_filters=8, num_layers=4, num_pool=2):
 
 
 def get_example_variable_space(num_layers=5, num_choices=7):
-    variable_space = architect.VariableSpace.from_list([
+    variable_space = architect.ModelSpace.from_list([
         architect.IntegerModelVariable('layer%i'%i, min=1, max=num_choices)
         for i in range(num_layers)
     ])
@@ -100,7 +100,7 @@ def get_example_variable_space(num_layers=5, num_choices=7):
 
 def get_example_sparse_model_space(num_layers=4):
     """Model space for multi-input/output sparse feed-forward nets"""
-    state_space = architect.ModelSpace()
+    state_space = architect.OperationSpace()
     layer_sharing = {}
     for i in range(num_layers):
         state_space.add_layer(i, [
@@ -127,7 +127,7 @@ def get_bionas_model_space():
 
     Adding `Identity` state to a layer is basically omitting a layer by performing no operations.
     """
-    state_space = architect.ModelSpace()
+    state_space = architect.OperationSpace()
     state_space.add_layer(0, [
         architect.Operation('conv1d', filters=3, kernel_size=8, kernel_initializer='glorot_uniform', activation='relu',
               name="conv1"),

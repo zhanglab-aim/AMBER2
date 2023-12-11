@@ -1,16 +1,18 @@
 
 import numpy as np
 import scipy.stats as ss
+from ..model_space import ModelVariable, IntegerModelVariable, ContinuousModelVariable
 
-
-class BayesProb:
+class BayesProb(ModelVariable):
     def __init__(self, **kwargs):
+        self.name = kwargs.pop('name', None)
         self.__dict__.update(kwargs)
         #if store_prior is True:
         self.prior_dist = self.sample(size=2000)
         #else:
         #    self.prior_dict = []
-
+        self.value = np.mean(self.prior_dist)
+    
     def update(self, data, **kwargs):
         """
         data : np.array-like
@@ -21,7 +23,7 @@ class BayesProb:
         pass
 
 
-class Categorical(BayesProb):
+class Categorical(BayesProb, IntegerModelVariable):
     def __init__(self, choices, prior_cnt, **kwargs):
         self.obs_cnt = np.array([0]*len(choices))
         super().__init__(choices=choices, prior_cnt=prior_cnt, **kwargs)
@@ -39,14 +41,14 @@ class Categorical(BayesProb):
         cnt = (self.obs_cnt + self.prior_cnt)
         p = cnt/np.sum(cnt)
         onehots = ss.multinomial.rvs(n=1, p=p, size=size)
-        cats = [self.choices[np.argmax(x)] for x in onehots]
+        cats = np.array([self.choices[np.argmax(x)] for x in onehots])
         if size == 1:
             return cats[0]
         else:
             return cats
 
 
-class EmpiricalGaussianKDE(BayesProb):
+class EmpiricalGaussianKDE(BayesProb, ContinuousModelVariable):
     def __init__(self, integerize=False, lb=None, ub=None, **kwargs):
         self.integerize = integerize
         self.lb = lb if lb is not None else -np.inf
@@ -74,7 +76,7 @@ class EmpiricalGaussianKDE(BayesProb):
             a = int(a) if size == 1 else np.array(a, dtype=int)
         return a
 
-class Binomial(BayesProb):
+class Binomial(BayesProb, IntegerModelVariable):
     def __init__(self, alpha, beta, n=1, **kwargs):
         self.x = []
         self.n = n
@@ -106,7 +108,7 @@ class Binomial(BayesProb):
             return a
 
 
-class TruncatedNormal(BayesProb):
+class TruncatedNormal(BayesProb, ContinuousModelVariable):
     def __init__(self, mu_0, k0, sigma2_0, v0, integerize=False, lb=None, ub=None, **kwargs):
         """truncated normal with unknown mean and variance.
         Conjugate prior is inverse gamma
@@ -160,7 +162,7 @@ class TruncatedNormal(BayesProb):
         return a
 
     def sample(self, size=1):
-        a = self._sample_one() if size == 1 else [self._sample_one() for _ in range(size)]
+        a = self._sample_one() if size == 1 else np.array([self._sample_one() for _ in range(size)])
         if self.integerize is True:
             a = int(a) if size == 1 else np.array(a, dtype=int)
         return a
@@ -186,7 +188,7 @@ class TruncatedNormal(BayesProb):
 
 
 
-class Poisson(BayesProb):
+class Poisson(BayesProb, IntegerModelVariable):
     def __init__(self, alpha, beta, **kwargs):
         """
         Parameters
@@ -233,4 +235,4 @@ class ZeroTruncatedNegativeBinomial(Poisson):
         if size == 1:
             return self._sample_one()
         else:
-            return [self._sample_one() for _ in range(size)]
+            return np.array([self._sample_one() for _ in range(size)])
