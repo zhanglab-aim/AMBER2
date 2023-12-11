@@ -18,6 +18,15 @@ def set_session(sess):
     assert isinstance(sess, cache.compute_graph)
     cache.CURRENT_GRAPH = sess    
 
+def set_seed(seed: int):
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    try:
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+    except RuntimeError:
+        pass
+
 
 class session_scope():
     def __init__(self, sess=None, *args, **kwargs):

@@ -226,7 +226,8 @@ def get_session(): pass # type:ignore
     
 
 def clear_session(): pass # type:ignore
-    
+
+def set_seed(): pass # type:ignore    
 
 @contextlib.contextmanager
 def variable_scope(name, *args, **kwargs): pass

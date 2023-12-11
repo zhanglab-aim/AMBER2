@@ -4,6 +4,7 @@
 import tensorflow as tf
 from tensorflow.test import TestCase
 import gc
+import os
 from . import cache
 
 session_cache = {}
@@ -28,6 +29,12 @@ def init_all_params(sess, var_scope=None):
     var_scope = var_scope or ''
     vars = [v for v in tf.all_variables() if v.name.startswith(var_scope)]
     sess.run(tf.initialize_variables(vars))
+
+def set_seed(seed: int):
+    tf.random.set_seed(seed)
+    tf.experimental.numpy.random.seed(seed)
+    os.environ['TF_CUDNN_DETERMINISTIC'] = '1'
+    os.environ['TF_DETERMINISTIC_OPS'] = '1'
 
 # def variable_scope(name, *args, **kwargs):
 #     reuse = kwargs.pop("reuse", tf.compat.v1.AUTO_REUSE)
