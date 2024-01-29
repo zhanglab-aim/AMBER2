@@ -63,6 +63,13 @@ class IntegerModelVariable(ModelVariable):
     
     def __len__(self):
         return self.num_choices
+    
+class CategoricalModelVariable(IntegerModelVariable):
+    def __init__(self, name: str, num_choices: Union[int, float], init_value: Optional[Union[int, float]] = None):
+        min = 0; max = num_choices - 1
+        super().__init__(name, min, max, init_value)
+        if self.value is None:
+            self.set(self.uniform_sample())
 
 class ContinuousModelVariable(ModelVariable):
     def __init__(self, name: str, min: Union[int, float], max: Union[int, float], init_value: Optional[Union[int, float]] = None):
